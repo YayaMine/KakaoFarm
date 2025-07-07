@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "44433449173",
+    "firebase_url": "https://roadeye-284ac-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "roadeye-284ac",
+    "storage_bucket": "roadeye-284ac.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:44433449173:android:cabd17915a85f8c4fb425c",
+        "android_client_info": {
+          "package_name": "com.example.appspertanian"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCtq4rbmrGPXuObQ-yGSixOfROljO-eYEs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
