@@ -1,10 +1,7 @@
-import 'dart:async';
-
-import 'package:firebase_database/firebase_database.dart';
+import 'package:appspertanian/controllers/node_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'Home.dart';
 
@@ -14,84 +11,38 @@ class Env2 extends StatefulWidget {
 }
 
 class _Env2State extends State<Env2> {
-  List<String> farmNodes = [];
-  int? selectedIndex;
-  Map<String, Map<String, dynamic>> farmDataMap = {};
-  bool loading = false;
-
+  late NodeController _nodeController;
+  bool _loading = false;
   final TextEditingController _newNodeController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _loadFarmNodes();
+    _nodeController = NodeController(
+      onNodesUpdated: _onNodesUpdated,
+      onSelectedIndexUpdated: _onSelectedIndexUpdated,
+      onFarmDataUpdated: _onFarmDataUpdated,
+      onLoadingChanged: _onLoadingChanged,
+    );
+    _nodeController.loadFarmNodes();
   }
 
-  Future<void> _loadFarmNodes() async {
-    final prefs = await SharedPreferences.getInstance();
-    List<String>? savedNodes = prefs.getStringList('farmNodes');
-    int? savedSelectedIndex = prefs.getInt('selectedIndex');
-
-    if (savedNodes != null && savedNodes.isNotEmpty) {
-      setState(() {
-        farmNodes = savedNodes;
-        if (savedSelectedIndex != null &&
-            savedSelectedIndex < farmNodes.length) {
-          selectedIndex = savedSelectedIndex;
-        } else {
-          selectedIndex = null;
-        }
-      });
-
-      for (String node in farmNodes) {
-        await fetchFarmData(node);
-      }
-    }
+  void _onNodesUpdated() {
+    setState(() {});
   }
 
-  Future<void> _saveFarmNodes() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('farmNodes', farmNodes);
+  void _onSelectedIndexUpdated() {
+    setState(() {});
   }
 
-  Future<void> _saveSelectedIndex() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (selectedIndex != null) {
-      await prefs.setInt('selectedIndex', selectedIndex!);
-    } else {
-      await prefs.remove('selectedIndex');
-    }
+  void _onFarmDataUpdated() {
+    setState(() {});
   }
 
-  Future<void> fetchFarmData(String node) async {
+  void _onLoadingChanged(bool isLoading) {
     setState(() {
-      loading = true;
+      _loading = isLoading;
     });
-    try {
-      final ref = FirebaseDatabase.instance.ref(node);
-      final snapshot = await ref.get();
-
-      if (snapshot.exists) {
-        Map<String, dynamic> data = Map<String, dynamic>.from(
-          snapshot.value as Map,
-        );
-        setState(() {
-          farmDataMap[node] = data;
-        });
-      } else {
-        setState(() {
-          farmDataMap[node] = {};
-        });
-      }
-    } catch (e) {
-      setState(() {
-        farmDataMap[node] = {'error': 'Failed to fetch data'};
-      });
-    } finally {
-      setState(() {
-        loading = false;
-      });
-    }
   }
 
   void _showAddNodeDialog() {
@@ -117,14 +68,7 @@ class _Env2State extends State<Env2> {
             TextButton(
               onPressed: () {
                 String newNode = _newNodeController.text.trim();
-                if (newNode.isNotEmpty && !farmNodes.contains(newNode)) {
-                  setState(() {
-                    farmNodes.add(newNode);
-                  });
-                  _saveFarmNodes(); // simpan list node ke shared prefs
-                  fetchFarmData(newNode);
-                  _setSelectedIndex(farmNodes.indexOf(newNode));
-                }
+                _nodeController.addNode(newNode);
                 _newNodeController.clear();
                 Navigator.pop(context);
               },
@@ -136,33 +80,8 @@ class _Env2State extends State<Env2> {
     );
   }
 
-  void _deleteNode(int index) {
-    String node = farmNodes[index];
-    setState(() {
-      farmNodes.removeAt(index);
-      farmDataMap.remove(node);
-      if (selectedIndex != null) {
-        if (farmNodes.isEmpty) {
-          selectedIndex = null;
-        } else if (selectedIndex! >= farmNodes.length) {
-          selectedIndex = farmNodes.length - 1;
-        }
-      }
-    });
-    _saveFarmNodes();
-    _saveSelectedIndex();
-  }
-
-  void _setSelectedIndex(int? index) {
-    setState(() {
-      selectedIndex = index;
-    });
-    _saveSelectedIndex();
-  }
-
-  String _getField(String node, String key) {
-    if (farmDataMap[node] == null) return "-";
-    return farmDataMap[node]![key]?.toString() ?? "-";
+  void _deleteNodeConfirmed(int index) {
+    _nodeController.deleteNode(index);
   }
 
   @override
@@ -174,8 +93,12 @@ class _Env2State extends State<Env2> {
   @override
   Widget build(BuildContext context) {
     final hasSelection =
-        selectedIndex != null && selectedIndex! < farmNodes.length;
-    final currentNode = hasSelection ? farmNodes[selectedIndex!] : null;
+        _nodeController.selectedIndex != null &&
+        _nodeController.selectedIndex! < _nodeController.farmNodes.length;
+    final currentNode =
+        hasSelection
+            ? _nodeController.farmNodes[_nodeController.selectedIndex!]
+            : null;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -279,18 +202,24 @@ class _Env2State extends State<Env2> {
                             scrollDirection: Axis.horizontal,
                             child: Row(
                               children:
-                                  farmNodes.asMap().entries.map((entry) {
+                                  _nodeController.farmNodes.asMap().entries.map((
+                                    entry,
+                                  ) {
                                     int index = entry.key;
                                     String node = entry.value;
-                                    bool isSelected = selectedIndex == index;
+                                    bool isSelected =
+                                        _nodeController.selectedIndex == index;
                                     return Padding(
                                       padding: EdgeInsets.only(right: 12),
                                       child: Stack(
                                         children: [
                                           GestureDetector(
                                             onTap: () async {
-                                              await fetchFarmData(node);
-                                              _setSelectedIndex(index);
+                                              await _nodeController
+                                                  .fetchFarmData(node);
+                                              _nodeController.setSelectedIndex(
+                                                index,
+                                              );
                                             },
                                             child: Container(
                                               width: 110,
@@ -344,14 +273,17 @@ class _Env2State extends State<Env2> {
                                               ),
                                             ),
                                           ),
-                                          // Tombol close di pojok kanan atas card kecil untuk deselect, bukan hapus node
+
                                           Positioned(
                                             right: 0,
                                             top: 0,
                                             child: GestureDetector(
                                               onTap: () {
-                                                if (selectedIndex == index) {
-                                                  _setSelectedIndex(null);
+                                                if (_nodeController
+                                                        .selectedIndex ==
+                                                    index) {
+                                                  _nodeController
+                                                      .setSelectedIndex(null);
                                                 }
                                               },
                                               child: Container(
@@ -368,7 +300,7 @@ class _Env2State extends State<Env2> {
                                               ),
                                             ),
                                           ),
-                                          // Tombol hapus node (delete) di pojok kiri bawah
+
                                           Positioned(
                                             left: 0,
                                             bottom: 0,
@@ -398,7 +330,9 @@ class _Env2State extends State<Env2> {
                                                             Navigator.pop(
                                                               context,
                                                             );
-                                                            _deleteNode(index);
+                                                            _deleteNodeConfirmed(
+                                                              index,
+                                                            );
                                                           },
                                                           child: Text('Hapus'),
                                                         ),
@@ -450,7 +384,7 @@ class _Env2State extends State<Env2> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child:
-                            loading
+                            _loading
                                 ? Center(child: CircularProgressIndicator())
                                 : hasSelection
                                 ? SingleChildScrollView(
@@ -463,7 +397,9 @@ class _Env2State extends State<Env2> {
                                           top: 16.0,
                                         ),
                                         child: Text(
-                                          farmNodes[selectedIndex!],
+                                          _nodeController
+                                              .farmNodes[_nodeController
+                                              .selectedIndex!],
                                           style: TextStyle(
                                             color: Color(0xFF113A1D),
                                             fontWeight: FontWeight.bold,
@@ -473,13 +409,34 @@ class _Env2State extends State<Env2> {
                                       ),
                                       SizedBox(height: 10),
                                       ..._buildFarmDetails(
-                                        _getField(currentNode!, 'cond'),
-                                        _getField(currentNode, 'hum'),
-                                        _getField(currentNode, 'k'),
-                                        _getField(currentNode, 'n'),
-                                        _getField(currentNode, 'p'),
-                                        _getField(currentNode, 'ph'),
-                                        _getField(currentNode, 'temp'),
+                                        _nodeController.getField(
+                                          currentNode!,
+                                          'cond',
+                                        ),
+                                        _nodeController.getField(
+                                          currentNode,
+                                          'hum',
+                                        ),
+                                        _nodeController.getField(
+                                          currentNode,
+                                          'k',
+                                        ),
+                                        _nodeController.getField(
+                                          currentNode,
+                                          'n',
+                                        ),
+                                        _nodeController.getField(
+                                          currentNode,
+                                          'p',
+                                        ),
+                                        _nodeController.getField(
+                                          currentNode,
+                                          'ph',
+                                        ),
+                                        _nodeController.getField(
+                                          currentNode,
+                                          'temp',
+                                        ),
                                       ),
                                     ],
                                   ),
