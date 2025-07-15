@@ -1,17 +1,16 @@
-import 'package:appspertanian/env2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'Control.dart';
-import 'Envirotment1.dart';
+import '../screens/environment_screen.dart';
+import '../screens/home_screen.dart';
 
-class Home extends StatefulWidget {
+class ControlWidget extends StatefulWidget {
   @override
-  _HomeState createState() => _HomeState();
+  _ControlWidgetState createState() => _ControlWidgetState();
 }
 
-class _HomeState extends State<Home> {
+class _ControlWidgetState extends State<ControlWidget> {
   int _currentIndex = 0;
 
   @override
@@ -40,6 +39,30 @@ class _HomeState extends State<Home> {
                           top: 35,
                           left: 0,
                           right: 0,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              IconButton(
+                                icon: Icon(
+                                  Icons.arrow_back,
+                                  color: Colors.white,
+                                ),
+                                onPressed: () {
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => HomeScreen(),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                        Positioned(
+                          top: 45,
+                          left: 0,
+                          right: 0,
                           child: Center(
                             child: Text(
                               'LOGO KAKAO',
@@ -52,14 +75,22 @@ class _HomeState extends State<Home> {
                           ),
                         ),
                         Positioned(
+                          top: 45,
+                          right: 20,
+                          child: SvgPicture.asset(
+                            'assets/images/test.svg',
+                            width: 28,
+                            height: 28,
+                          ),
+                        ),
+                        Positioned(
                           top: 100,
-                          bottom: 20,
                           left: 40,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Kakao Farm',
+                                'Control Sistem',
                                 style: GoogleFonts.nunito(
                                   color: Colors.white,
                                   fontSize: 36,
@@ -75,27 +106,7 @@ class _HomeState extends State<Home> {
                                   fontWeight: FontWeight.w400,
                                 ),
                               ),
-                              SizedBox(height: 10),
-                              SizedBox(
-                                width: 300,
-                                child: Text(
-                                  'Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has',
-                                  style: GoogleFonts.nunito(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
                             ],
-                          ),
-                        ),
-                        Positioned(
-                          top: 32,
-                          right: 20,
-                          child: SvgPicture.asset(
-                            'assets/images/test.svg',
-                            width: 28,
-                            height: 28,
                           ),
                         ),
                       ],
@@ -103,7 +114,7 @@ class _HomeState extends State<Home> {
                   ),
 
                   Transform.translate(
-                    offset: Offset(0, -75),
+                    offset: Offset(0, -90),
                     child: Column(
                       children: <Widget>[
                         Wrap(
@@ -111,24 +122,19 @@ class _HomeState extends State<Home> {
                           runSpacing: 20,
                           alignment: WrapAlignment.center,
                           children: [
-                            _buildResponsiveCard(
+                            _buildCard(
                               'assets/images/front-page-svgrepo-com.svg',
                               'Control Sistem',
                               context,
                             ),
-                            _buildResponsiveCard(
+                            _buildCard(
                               'assets/images/soil-temperature-svgrepo-com.svg',
-                              'Env status',
+                              'Environment\nStatus',
                               context,
                             ),
-                            _buildResponsiveCard(
+                            _buildCard(
                               'assets/images/event-calender-date-note-svgrepo-com.svg',
                               'History',
-                              context,
-                            ),
-                            _buildResponsiveCard(
-                              'assets/images/event-calender-date-note-svgrepo-com.svg',
-                              'History 1',
                               context,
                             ),
                           ],
@@ -176,20 +182,16 @@ class _HomeState extends State<Home> {
                       if (_currentIndex == 0) {
                         Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(builder: (context) => Home()),
+                          MaterialPageRoute(builder: (context) => HomeScreen()),
                         );
                       } else if (_currentIndex == 1) {
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => Envirotment1(),
+                            builder: (context) => EnvironmentScreen(),
                           ),
                         );
-                      } else if (_currentIndex == 3) {}
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => Env2()),
-                      );
+                      } else if (_currentIndex == 2) {}
                     },
                     items: [
                       BottomNavigationBarItem(
@@ -227,43 +229,32 @@ class _HomeState extends State<Home> {
     );
   }
 
-  Widget _buildResponsiveCard(
-    String assetPath,
-    String title,
-    BuildContext context,
-  ) {
-    double width = MediaQuery.of(context).size.width;
-
+  Widget _buildCard(String assetPath, String title, BuildContext context) {
     return SizedBox(
-      width: width * 0.4,
-      height: width * 0.4,
+      width: 195,
+      height: 195,
       child: Card(
         elevation: 12,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: GestureDetector(
           onTap: () {
-            if (title == 'Control Sistem') {
+            if (title == 'Environment\nStatus') {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => Control()),
-              );
-            } else if (title == 'Env status') {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => Envirotment1()),
-              );
-            } else if (title == 'History') {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => Env2()),
+                MaterialPageRoute(builder: (context) => EnvironmentScreen()),
               );
             }
           },
           child: Stack(
             children: [
-              Center(child: SvgPicture.asset(assetPath, height: 60, width: 60)),
               Positioned(
-                bottom: 10,
+                top: 20,
+                left: 50,
+                right: 50,
+                child: SvgPicture.asset(assetPath, height: 120, width: 120),
+              ),
+              Positioned(
+                bottom: 15,
                 left: 0,
                 right: 0,
                 child: Center(
@@ -273,7 +264,7 @@ class _HomeState extends State<Home> {
                     style: GoogleFonts.nunito(
                       fontWeight: FontWeight.w600,
                       color: Color(0xFF14A741),
-                      fontSize: 15,
+                      fontSize: 18,
                     ),
                   ),
                 ),

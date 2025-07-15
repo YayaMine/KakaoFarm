@@ -1,16 +1,19 @@
+import 'package:appspertanian/dump/env2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'Envirotment1.dart';
-import 'Home.dart';
+import '../widgets/control_widget.dart';
+import '../screens/environment_screen.dart';
 
-class Control extends StatefulWidget {
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
   @override
-  _ControlState createState() => _ControlState();
+  _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _ControlState extends State<Control> {
+class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
   @override
@@ -39,30 +42,6 @@ class _ControlState extends State<Control> {
                           top: 35,
                           left: 0,
                           right: 0,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              IconButton(
-                                icon: Icon(
-                                  Icons.arrow_back,
-                                  color: Colors.white,
-                                ),
-                                onPressed: () {
-                                  Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => Home(),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                        Positioned(
-                          top: 45,
-                          left: 0,
-                          right: 0,
                           child: Center(
                             child: Text(
                               'LOGO KAKAO',
@@ -75,22 +54,14 @@ class _ControlState extends State<Control> {
                           ),
                         ),
                         Positioned(
-                          top: 45,
-                          right: 20,
-                          child: SvgPicture.asset(
-                            'assets/images/test.svg',
-                            width: 28,
-                            height: 28,
-                          ),
-                        ),
-                        Positioned(
                           top: 100,
+                          bottom: 20,
                           left: 40,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Control Sistem',
+                                'Kakao Farm',
                                 style: GoogleFonts.nunito(
                                   color: Colors.white,
                                   fontSize: 36,
@@ -106,7 +77,27 @@ class _ControlState extends State<Control> {
                                   fontWeight: FontWeight.w400,
                                 ),
                               ),
+                              SizedBox(height: 10),
+                              SizedBox(
+                                width: 300,
+                                child: Text(
+                                  'Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has',
+                                  style: GoogleFonts.nunito(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
                             ],
+                          ),
+                        ),
+                        Positioned(
+                          top: 32,
+                          right: 20,
+                          child: SvgPicture.asset(
+                            'assets/images/test.svg',
+                            width: 28,
+                            height: 28,
                           ),
                         ),
                       ],
@@ -114,7 +105,7 @@ class _ControlState extends State<Control> {
                   ),
 
                   Transform.translate(
-                    offset: Offset(0, -90),
+                    offset: Offset(0, -75),
                     child: Column(
                       children: <Widget>[
                         Wrap(
@@ -122,19 +113,24 @@ class _ControlState extends State<Control> {
                           runSpacing: 20,
                           alignment: WrapAlignment.center,
                           children: [
-                            _buildCard(
+                            _buildResponsiveCard(
                               'assets/images/front-page-svgrepo-com.svg',
                               'Control Sistem',
                               context,
                             ),
-                            _buildCard(
+                            _buildResponsiveCard(
                               'assets/images/soil-temperature-svgrepo-com.svg',
-                              'Environment\nStatus',
+                              'Env status',
                               context,
                             ),
-                            _buildCard(
+                            _buildResponsiveCard(
                               'assets/images/event-calender-date-note-svgrepo-com.svg',
                               'History',
+                              context,
+                            ),
+                            _buildResponsiveCard(
+                              'assets/images/event-calender-date-note-svgrepo-com.svg',
+                              'History 1',
                               context,
                             ),
                           ],
@@ -182,16 +178,20 @@ class _ControlState extends State<Control> {
                       if (_currentIndex == 0) {
                         Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(builder: (context) => Home()),
+                          MaterialPageRoute(builder: (context) => HomeScreen()),
                         );
                       } else if (_currentIndex == 1) {
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => Envirotment1(),
+                            builder: (context) => EnvironmentScreen(),
                           ),
                         );
-                      } else if (_currentIndex == 2) {}
+                      } else if (_currentIndex == 3) {}
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => Env2()),
+                      );
                     },
                     items: [
                       BottomNavigationBarItem(
@@ -229,32 +229,43 @@ class _ControlState extends State<Control> {
     );
   }
 
-  Widget _buildCard(String assetPath, String title, BuildContext context) {
+  Widget _buildResponsiveCard(
+    String assetPath,
+    String title,
+    BuildContext context,
+  ) {
+    double width = MediaQuery.of(context).size.width;
+
     return SizedBox(
-      width: 195,
-      height: 195,
+      width: width * 0.4,
+      height: width * 0.4,
       child: Card(
         elevation: 12,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: GestureDetector(
           onTap: () {
-            if (title == 'Environment\nStatus') {
+            if (title == 'Control Sistem') {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => Envirotment1()),
+                MaterialPageRoute(builder: (context) => ControlWidget()),
+              );
+            } else if (title == 'Env status') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => EnvironmentScreen()),
+              );
+            } else if (title == 'History') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => Env2()),
               );
             }
           },
           child: Stack(
             children: [
+              Center(child: SvgPicture.asset(assetPath, height: 60, width: 60)),
               Positioned(
-                top: 20,
-                left: 50,
-                right: 50,
-                child: SvgPicture.asset(assetPath, height: 120, width: 120),
-              ),
-              Positioned(
-                bottom: 15,
+                bottom: 10,
                 left: 0,
                 right: 0,
                 child: Center(
@@ -264,7 +275,7 @@ class _ControlState extends State<Control> {
                     style: GoogleFonts.nunito(
                       fontWeight: FontWeight.w600,
                       color: Color(0xFF14A741),
-                      fontSize: 18,
+                      fontSize: 15,
                     ),
                   ),
                 ),
