@@ -39,7 +39,7 @@ class NodeController {
       onSelectedIndexUpdated?.call();
 
       for (String node in _farmNodes) {
-        await fetchFarmData(node);
+        await listenToFarmData(node);
       }
     }
   }
@@ -58,7 +58,7 @@ class NodeController {
     }
   }
 
-  Future<void> fetchFarmData(String node) async {
+  Future<void> listenToFarmData(String node) async {
     onLoadingChanged?.call(true);
     try {
       final ref = FirebaseDatabase.instance.ref(node);
@@ -85,7 +85,7 @@ class NodeController {
     if (newNode.isNotEmpty && !_farmNodes.contains(newNode)) {
       _farmNodes.add(newNode);
       _saveFarmNodes();
-      fetchFarmData(newNode);
+      listenToFarmData(newNode);
       setSelectedIndex(_farmNodes.indexOf(newNode));
       onNodesUpdated?.call();
     }

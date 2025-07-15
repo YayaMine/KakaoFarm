@@ -216,7 +216,7 @@ class _Env2State extends State<Env2> {
                                           GestureDetector(
                                             onTap: () async {
                                               await _nodeController
-                                                  .fetchFarmData(node);
+                                                  .listenToFarmData(node);
                                               _nodeController.setSelectedIndex(
                                                 index,
                                               );
