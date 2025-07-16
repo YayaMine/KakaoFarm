@@ -1,24 +1,194 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:intl/intl.dart';
+
 import '../models/soil_data.dart';
 import '../providers/soil_provider.dart';
-import '../screens/home_screen.dart';
+import '../widgets/header_section.dart';
+import '../widgets/farm_info_box.dart';
+import '../widgets/farm_selector_card.dart';
+import '../widgets/navigation_bottom.dart';
 
 class EnvironmentScreen extends StatefulWidget {
+  const EnvironmentScreen({super.key});
+
   @override
   _EnvironmentScreenState createState() => _EnvironmentScreenState();
 }
 
 class _EnvironmentScreenState extends State<EnvironmentScreen> {
+  int _currentIndex = 1;
   int selectedIndex = 0;
+
+  final _idController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    // Trigger fetch saat pertama kali masuk halaman
     Provider.of<SoilProvider>(context, listen: false).loadData();
+  }
+
+  @override
+  void dispose() {
+    _idController.dispose();
+    super.dispose();
+  }
+
+  void _showRegisterNodeDialog(BuildContext context, List<String> existingIds) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Register New Node'),
+          content: TextField(
+            controller: _idController,
+            decoration: const InputDecoration(labelText: 'Node ID'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final newId = _idController.text.trim();
+                if (newId.isEmpty) return;
+
+                if (existingIds.contains(newId)) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Node ID already registered!')),
+                  );
+                } else {
+                  final db = FirebaseDatabase.instance.ref();
+                  final timestamp = DateFormat('yyyy-MM-dd_HH-mm-ss').format(DateTime.now());
+                  final snapshot = await db.child('registeredNodes').get();
+                  final length = snapshot.children.length;
+                  await db.child('registeredNodes/$length').set(newId);
+                  await db.child('dataNodes/$newId').set({
+                    'cond': "0",
+                    'hum': "0",
+                    'k': "0",
+                    'n': "0",
+                    'p': "0",
+                    'ph': "0",
+                    'temp': "0",
+                    'datetime': timestamp,
+                  });
+                  Navigator.pop(context);
+                  _idController.clear();
+                  Provider.of<SoilProvider>(context, listen: false).loadData();
+                }
+              },
+              child: const Text('Register'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _editNodeId(String oldId) {
+    final editController = TextEditingController(text: oldId);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Edit Node ID'),
+          content: TextField(
+            controller: editController,
+            decoration: const InputDecoration(labelText: 'New Node ID'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final newId = editController.text.trim();
+                if (newId.isEmpty || newId == oldId) return;
+
+                final db = FirebaseDatabase.instance.ref();
+
+                // Cek apakah ID baru sudah ada
+                final registeredSnapshot = await db.child('registeredNodes').get();
+                final isDuplicate = registeredSnapshot.children.any((node) => node.value == newId);
+
+                if (isDuplicate) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Node ID already exists!')),
+                  );
+                  return;
+                }
+
+                // Temukan key dari node yang akan diubah
+                final target = registeredSnapshot.children.firstWhere((node) => node.value == oldId);
+                final key = target.key;
+
+                // Update ID di registerednodes dan copy data di datanodes
+                await db.child('registeredNodes/$key').set(newId);
+
+                final oldData = (await db.child('dataNodes/$oldId').get()).value;
+                await db.child('dataNodes/$newId').set(oldData);
+                await db.child('dataNodes/$oldId').remove();
+
+                Navigator.pop(context);
+                Provider.of<SoilProvider>(context, listen: false).loadData();
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _deleteNodeId(String id) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Delete Node'),
+          content: Text('Are you sure you want to delete node "$id"?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final db = FirebaseDatabase.instance.ref();
+
+                final snapshot = await db.child('registeredNodes').get();
+                final target = _findSnapshotByValue(snapshot.children, id);
+
+                if (target != null) {
+                  await db.child('registeredNodes/${target.key}').remove();
+                  await db.child('dataNodes/$id').remove();
+                }
+
+                Navigator.pop(context);
+                Provider.of<SoilProvider>(context, listen: false).loadData();
+              },
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  DataSnapshot? _findSnapshotByValue(Iterable<DataSnapshot> children, String id) {
+    for (var child in children) {
+      if (child.value == id) {
+        return child;
+      }
+    }
+    return null;
   }
 
   @override
@@ -44,138 +214,118 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
-                      Container(
-                        height: 350,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF14A741),
-                          borderRadius: const BorderRadius.only(
-                            bottomLeft: Radius.circular(180),
+                      HeaderSection(
+                        title: 'Environment',
+                        subtitle: 'online',
+                        showBackButton: true,
+                      ),
+                      Transform.translate(
+                        offset: const Offset(0, -100),
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.only(left: 12),
+                          child: Row(
+                            children: List.generate(nodeIds.length, (index) {
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 12),
+                                child: FarmSelectorCard(
+                                  title: 'Farm ${nodeIds[index]}',
+                                  isSelected: selectedIndex == index,
+                                  onTap: () {
+                                    setState(() {
+                                      selectedIndex = index;
+                                    });
+                                  },
+                                ),
+                              );
+                            }),
                           ),
                         ),
-                        child: Stack(
-                          children: [
-                            Positioned(
-                              top: 35,
-                              left: 0,
-                              right: 0,
-                              child: Row(
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                                    onPressed: () {
-                                      Navigator.pushReplacement(
-                                        context,
-                                        MaterialPageRoute(builder: (context) => HomeScreen()),
-                                      );
-                                    },
-                                  ),
-                                ],
+                      ),
+                      Transform.translate(
+                        offset: const Offset(0, -75),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Card(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            elevation: 5,
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                border: Border.all(color: const Color(0xFF14A741), width: 2),
+                                borderRadius: BorderRadius.circular(20),
                               ),
-                            ),
-                            Positioned(
-                              top: 45,
-                              right: 20,
-                              child: SvgPicture.asset('assets/images/test.svg', width: 28, height: 28),
-                            ),
-                            Positioned(
-                              top: 45,
-                              left: 0,
-                              right: 0,
-                              child: Center(
-                                child: Text(
-                                  'LOGO KAKAO',
-                                  style: GoogleFonts.nunito(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              top: 100,
-                              left: 40,
-                              child: Column(
+                              child: currentData != null
+                                  ? Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    'Environment',
-                                    style: GoogleFonts.nunito(
-                                      color: Colors.white,
-                                      fontSize: 36,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const Text(
-                                    'online',
-                                    style: TextStyle(color: Colors.white, fontSize: 15, height: 0.15),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Positioned(
-                              top: 170,
-                              left: 20,
-                              right: 0,
-                              child: SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: Row(
-                                  children: List.generate(nodeIds.length, (index) {
-                                    return Padding(
-                                      padding: const EdgeInsets.only(right: 12),
-                                      child: _buildCustomCard(
-                                        'Farm ${index + 1}',
-                                        'assets/images/earth-svgrepo-com.svg',
-                                        selectedIndex == index ? const Color(0xFF113A1D) : Colors.white,
-                                        selectedIndex == index ? Colors.white : const Color(0xFF113A1D),
-                                        110,
-                                        110,
-                                        index,
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Farm ${selectedIndex + 1} (${currentData.id})',
+                                        style: const TextStyle(
+                                          color: Color(0xFF113A1D),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 18,
+                                        ),
                                       ),
-                                    );
-                                  }),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Card(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                          elevation: 5,
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              border: Border.all(color: const Color(0xFF14A741), width: 2),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: currentData != null
-                                ? Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Farm ${selectedIndex + 1} (${currentData.id})',
-                                  style: const TextStyle(
-                                    color: Color(0xFF113A1D),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
+                                      PopupMenuButton<String>(
+                                        icon: const Icon(Icons.settings, color: Color(0xFF113A1D)),
+                                        onSelected: (value) {
+                                          if (value == 'edit') {
+                                            _editNodeId(currentNodeId!);
+                                          } else if (value == 'delete') {
+                                            _deleteNodeId(currentNodeId!);
+                                          }
+                                        },
+                                        itemBuilder: (BuildContext context) => [
+                                          const PopupMenuItem<String>(
+                                            value: 'edit',
+                                            child: Text('Edit Node ID'),
+                                          ),
+                                          const PopupMenuItem<String>(
+                                            value: 'delete',
+                                            child: Text('Delete Node'),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
-                                ),
-                                const SizedBox(height: 10),
-                                ..._buildFarmDetails(currentData),
-                              ],
-                            )
-                                : const Center(child: Text("No Data")),
+                                  const SizedBox(height: 10),
+                                  ..._buildFarmDetails(currentData),
+                                ],
+                              )
+                                  : const Center(child: Text("No Data")),
+                            ),
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
+              ),
+              Positioned(
+                right: 16,
+                bottom: 90,
+                child: FloatingActionButton(
+                  backgroundColor: const Color(0xFF14A741),
+                  onPressed: () => _showRegisterNodeDialog(context, nodeIds),
+                  child: const Icon(Icons.add, color: Colors.white),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+
+              NavigationBottom(
+                currentIndex: _currentIndex,
+                onTap: (index) {
+                  setState(() {
+                    _currentIndex = index;
+                  });
+                },
               ),
             ],
           ),
@@ -186,99 +336,13 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
 
   List<Widget> _buildFarmDetails(SoilData data) {
     return [
-      _buildFarmInfoBox('Condition', 'assets/images/air.svg', data.conductivity.toStringAsFixed(1)),
-      _buildFarmInfoBox('Humidity', 'assets/images/air.svg', data.moisture.toStringAsFixed(1)),
-      _buildFarmInfoBox('K', 'assets/images/air.svg', data.potassium.toStringAsFixed(1)),
-      _buildFarmInfoBox('N', 'assets/images/air.svg', data.nitrogen.toStringAsFixed(1)),
-      _buildFarmInfoBox('P', 'assets/images/air.svg', data.phosphorus.toStringAsFixed(1)),
-      _buildFarmInfoBox('pH', 'assets/images/air.svg', data.pH.toStringAsFixed(2)),
-      _buildFarmInfoBox('Temperature', 'assets/images/air.svg', data.temperature.toStringAsFixed(1)),
+      FarmInfoBox(label: 'Condition', iconPath: 'assets/images/air.svg', value: data.conductivity.toStringAsFixed(1)),
+      FarmInfoBox(label: 'Humidity', iconPath: 'assets/images/air.svg', value: data.moisture.toStringAsFixed(1)),
+      FarmInfoBox(label: 'K', iconPath: 'assets/images/air.svg', value: data.potassium.toStringAsFixed(1)),
+      FarmInfoBox(label: 'N', iconPath: 'assets/images/air.svg', value: data.nitrogen.toStringAsFixed(1)),
+      FarmInfoBox(label: 'P', iconPath: 'assets/images/air.svg', value: data.phosphorus.toStringAsFixed(1)),
+      FarmInfoBox(label: 'pH', iconPath: 'assets/images/air.svg', value: data.pH.toStringAsFixed(2)),
+      FarmInfoBox(label: 'Temperature', iconPath: 'assets/images/air.svg', value: data.temperature.toStringAsFixed(1)),
     ];
-  }
-
-  Widget _buildFarmInfoBox(String label, String iconPath, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF4F4F4),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFF14A741), width: 1),
-        ),
-        child: Row(
-          children: [
-            SvgPicture.asset(iconPath, width: 30, height: 30),
-            const SizedBox(width: 10),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Color(0xFF113A1D),
-                fontWeight: FontWeight.w500,
-                fontSize: 16,
-              ),
-            ),
-            const Spacer(),
-            Text(
-              value,
-              style: const TextStyle(
-                color: Color(0xFF113A1D),
-                fontWeight: FontWeight.w500,
-                fontSize: 16,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCustomCard(
-      String title,
-      String svgPath,
-      Color bgColor,
-      Color textColor,
-      double width,
-      double height,
-      int index,
-      ) {
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          selectedIndex = index;
-        });
-      },
-      child: Container(
-        width: width,
-        height: height,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SvgPicture.asset(svgPath, color: textColor, width: 50, height: 40),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: TextStyle(
-                color: textColor,
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
