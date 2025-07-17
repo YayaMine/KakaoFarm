@@ -5,12 +5,14 @@ import '../models/soil_data.dart';
 class SoilProvider with ChangeNotifier {
   final List<SoilData> _soilDataList = [];
   List<String> _registeredNodeIds = [];
+  bool _activeValve = false;
   bool _isLoading = true;
 
   final DatabaseReference _dbRef = FirebaseDatabase.instance.ref();
 
   List<SoilData> get soilDataList => _soilDataList;
   List<String> get registeredNodeIds => _registeredNodeIds;
+  bool get activeValve => _activeValve;
   bool get isLoading => _isLoading;
 
   Future<void> loadData() async {
@@ -38,6 +40,12 @@ class SoilProvider with ChangeNotifier {
             _soilDataList.add(SoilData.fromJson(parsed, id));
           }
         }
+
+        // Ambil data status valve
+        final valveSnapshot = await _dbRef.child('statusValve').once();
+        if (valveSnapshot.snapshot.value != null) {
+          _activeValve = valveSnapshot.snapshot.value as bool;
+        }
       }
     } catch (e) {
       debugPrint('Error loading soil data: $e');
@@ -45,6 +53,12 @@ class SoilProvider with ChangeNotifier {
 
     _isLoading = false;
     notifyListeners();
+  }
+
+  Future<void> toggleValve(bool value) async {
+    _activeValve = value;
+    notifyListeners();
+    await _dbRef.child('statusValve').set(value);
   }
 
   SoilData? getSoilDataById(String? id) {

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../providers/soil_provider.dart';
 import '../screens/environment_screen.dart';
 import '../widgets/header_section.dart';
 import '../widgets/menu_item.dart';
@@ -14,6 +16,11 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+
+  void _handleToggleValve(BuildContext context, bool newValue) {
+    final provider = Provider.of<SoilProvider>(context, listen: false);
+    provider.toggleValve(newValue);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,6 +83,25 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ],
                     ),
+                  ),
+                  Consumer<SoilProvider>(
+                    builder: (context, provider, child) {
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Valve Status',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                          Switch(
+                            value: provider.activeValve,
+                            onChanged: (value) {
+                              _handleToggleValve(context, value);
+                            },
+                          ),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 50),
                 ],

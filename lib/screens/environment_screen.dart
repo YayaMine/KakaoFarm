@@ -264,7 +264,7 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
-                                        'Farm ${selectedIndex + 1} (${currentData.id})',
+                                        'Farm ${currentData.id}',
                                         style: const TextStyle(
                                           color: Color(0xFF113A1D),
                                           fontWeight: FontWeight.bold,
