@@ -33,5 +33,4 @@ class NodeController {
   int? get selectedIndex => _selectedIndex;
   Map<String, Map<String, dynamic>> get farmDataMap => _farmDataMap;
 
-  // ... metode lainnya
 }

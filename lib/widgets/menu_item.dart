@@ -6,12 +6,14 @@ class MenuItem extends StatelessWidget {
   final String assetPath;
   final String title;
   final VoidCallback onTap;
+  final Widget? customCenterWidget;
 
   const MenuItem({
     super.key,
     required this.assetPath,
     required this.title,
     required this.onTap,
+    this.customCenterWidget,
   });
 
   @override
@@ -23,19 +25,16 @@ class MenuItem extends StatelessWidget {
       height: width * 0.4,
       child: Card(
         elevation: 12,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: GestureDetector(
           onTap: onTap,
           child: Stack(
             children: [
               Center(
-                child: SvgPicture.asset(
-                  assetPath,
-                  height: 60,
-                  width: 60,
-                ),
+                child:
+                    customCenterWidget != null
+                        ? customCenterWidget
+                        : SvgPicture.asset(assetPath, height: 60, width: 60),
               ),
               Positioned(
                 bottom: 10,
